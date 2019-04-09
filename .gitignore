@@ -1,1 +1,4 @@
 ﻿/.vs
+.tmp/
+node_modules/
+typings/
