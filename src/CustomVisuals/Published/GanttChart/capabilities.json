@@ -36,6 +36,12 @@
       "displayName": "Tooltip",
       "description": "Maximum 4 columns",
       "kind": "Measure"
+    },
+    {
+      "name": "VerticalMarker",
+      "displayName": "VerticalMarker",
+      "description": "Maximum 4 columns",
+      "kind": "Measure"
     }
   ],
   "dataViewMappings": [
@@ -117,6 +123,11 @@
             {
               "bind": {
                 "to": "Resource"
+              }
+            },
+            {
+              "bind": {
+                "to": "VerticalMarker"
               }
             }
           ],

@@ -167,6 +167,12 @@ module powerbi.extensibility.visual {
     const commaLiteral: string = ',';
     // nav
     let singleCharacter: Selection<HTMLElement>;
+
+    export interface MarkerInfoModel {
+        label: string,
+        date: Date
+    }
+
     // tslint:disable-next-line:interface-name
     export interface Task extends SelectableDataPoint {
         id: number;
@@ -188,6 +194,7 @@ module powerbi.extensibility.visual {
         parentId: number;
         expanded: boolean;
         mapId?: number;
+        verticalMarker: MarkerInfoModel[];
     }
 
     // tslint:disable-next-line:interface-name
@@ -347,6 +354,10 @@ module powerbi.extensibility.visual {
     }
 
     module Selectors {
+        export const markerLine1: ClassAndSelector = createClassAndSelector('gantt_chart-marker-line-1');
+        export const markerLine2: ClassAndSelector = createClassAndSelector('gantt_chart-marker-line-2');
+        export const markerLine3: ClassAndSelector = createClassAndSelector('gantt_chart-marker-line-3');
+        export const markerLine4: ClassAndSelector = createClassAndSelector('gantt_chart-marker-line-4');
         export const className: ClassAndSelector = createClassAndSelector('gantt');
         export const chart: ClassAndSelector = createClassAndSelector('gantt_chart');
         export const chartLine: ClassAndSelector = createClassAndSelector('gantt_chart-line');
@@ -418,6 +429,7 @@ module powerbi.extensibility.visual {
         export const kpiValueBag: string = 'KPIValueBag';
         export const resource: string = 'Resource';
         export const tooltip: string = 'Tooltip';
+        export const verticalMarker: string = 'VerticalMarker';
     }
 
     export class Gantt implements IVisual {
@@ -1450,6 +1462,25 @@ module powerbi.extensibility.visual {
             };
         }
 
+        private static getMarkersInfo(columnSource: DataViewMetadataColumn[], valuesdata: DataViewValueColumn[], index: number) : MarkerInfoModel[] {
+            let markersInfo = [];
+
+            if (!valuesdata ||
+                !columnSource ||
+                !(columnSource.length > 0) ||
+                !columnSource[0].roles) {
+                return null;
+            }
+
+            let markersData = valuesdata.filter(x => x.source.roles[GanttRoles.verticalMarker]);
+            for (let data of markersData) {
+                let markerInfo: MarkerInfoModel = { label: data.source.displayName, date: new Date(data.values[index].toString())}
+                markersInfo.push(markerInfo);
+            }
+
+            return markersInfo;
+        }
+
         private static getCategoricalTaskProperty<T>(
             columnSource: DataViewMetadataColumn[],
             // tslint:disable-next-line:no-any
@@ -1627,6 +1658,8 @@ module powerbi.extensibility.visual {
                     }
                 }
 
+                let markerInfo = this.getMarkersInfo(columnSource, valuesdata, index);
+                
                 let resource: string;
                 resource = Gantt.getCategoricalTaskProperty<string>(columnSource, valuesdata, GanttRoles.resource, index, -1);
                 let kpiValues: KPIValues[];
@@ -1892,8 +1925,10 @@ module powerbi.extensibility.visual {
                             rowId: null,
                             parentId: null,
                             expanded: null,
-                            mapId: index
+                            mapId: index, 
+                            verticalMarker: markerInfo
                         });
+                        
                     } else {
                         tasks.push({
                             id: index,
@@ -1917,8 +1952,10 @@ module powerbi.extensibility.visual {
                             isLeaf: null,
                             rowId: null,
                             parentId: null,
-                            expanded: null
+                            expanded: null,
+                            verticalMarker: markerInfo
                         });
+                        
                     }
                 } else {
                     r = 0;
@@ -1952,8 +1989,11 @@ module powerbi.extensibility.visual {
                             isLeaf: null,
                             rowId: null,
                             parentId: null,
-                            expanded: null
+                            expanded: null,
+                            verticalMarker: markerInfo
                         });
+                        
+
                         let sel: string;
                         // tslint:disable-next-line:no-any
                         const selection: any[] = [];
@@ -1998,8 +2038,11 @@ module powerbi.extensibility.visual {
                             isLeaf: null,
                             rowId: null,
                             parentId: null,
-                            expanded: null
+                            expanded: null,
+                            verticalMarker: markerInfo
                         });
+                        
+
                         // tslint:disable-next-line:no-use-before-declare
                         const categoryLabel: string = dataView.categorical.categories[legendIndex].values[index] === null ?
                         // tslint:disable-next-line:no-use-before-declare
@@ -6524,6 +6567,8 @@ module powerbi.extensibility.visual {
                                     textMeasurementService.svgEllipsis);
                             taskResource.append('title').text(currentLevel.resource);
                         }
+
+                        this.addVerticalMarker(taskSelection, currentLevel, tasknumber);
                     }
                 } else {
                     for (let tasknumber: number = 0; tasknumber < tasksLength; tasknumber++) {
@@ -6655,11 +6700,14 @@ module powerbi.extensibility.visual {
                                     AxisHelper.LabelLayoutStrategy.clip,
                                     Gantt.defaultValues.ResourceWidth - Gantt.resourceWidthPadding - 20,
                                     textMeasurementService.svgEllipsis);
-                            taskResource.append('title').text(currentLevel.resource);
+                            taskResource.append('title').text("currentLevel.resource");
 
                         }
                         let selectionManager: ISelectionManager;
                         selectionManager = this.selectionManager;
+
+                        this.addVerticalMarker(taskSelection, currentLevel, tasknumber);
+                        
                     }
                 }
                 let bars: UpdateSelection<Task>;
@@ -8763,6 +8811,63 @@ module powerbi.extensibility.visual {
                 }
             }
         }
+
+        private getTooltipForVerticalMarker(marker: {label: string, date: Date}): VisualTooltipDataItem[] {
+
+            let markerDate = marker.date;
+            let stringDate: string;
+            stringDate = (zeroLiteral + (markerDate.getMonth() + 1)).slice(-2)
+                + slashLiteral + (zeroLiteral + markerDate.getDate()).slice(-2) +
+                slashLiteral + markerDate.getFullYear();
+            let tooltip: VisualTooltipDataItem[];
+            tooltip = [{ displayName: marker.label, value: stringDate }];
+
+            return tooltip;
+        }
+
+        public addVerticalMarker(taskSelection: Selection<any>, currentLevel: Task, tasknumber: number) {
+            debugger;
+
+            let markersInfo = currentLevel.verticalMarker;
+            let markerIndex = 0;
+            for (let markerInfo of markersInfo) {
+                if (markerInfo) {
+                    let line: Line;
+                    line = {
+                        x1: this.timeScale(new Date(markerInfo.date.toString())),
+                        y1: Gantt.getBarYCoordinate(tasknumber),
+                        x2: this.timeScale(new Date(markerInfo.date.toString())),
+                        y2: Gantt.getBarYCoordinate(tasknumber) + Gantt.getBarHeight() + 10,
+                        tooltipInfo: this.getTooltipForVerticalMarker(markerInfo)
+                    };
+
+                    let markerGroup: Selection<Line>;
+                    markerGroup = taskSelection
+                        .datum(line)
+                        .append('g')
+                        .classed(Selectors.singlePhase.class, true);
+
+                    let marker = markerGroup
+                        .append('line')
+                        .style({
+                            position: 'absolute',
+                            opacity: 1,
+                            'z-index': 1000
+                        })
+                        .classed(Selectors["markerLine"+ ((markerIndex % 3)+1)].class, true);
+                    marker.attr({
+                        x1: (lines: Line) => { return lines.x1 },
+                        y1: (lines: Line) => lines.y1,
+                        x2: (lines: Line) => lines.x2,
+                        y2: (lines: Line) => lines.y2
+                    });
+                    
+                    markerIndex ++;
+                    this.renderTooltip(marker);
+                }
+            }
+        }
+
         // tslint:disable-next-line
         public collapseFunctinality(tasks: Task[], parentRowId1: any): void {
             // tslint:disable-next-line:prefer-template
