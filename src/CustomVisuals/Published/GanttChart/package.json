@@ -1,10 +1,10 @@
 {
-  "name": "GanttChartbyMAQSoftware",
+  "name": "GanttChartWithMarkers",
   "version": "3.0.0",
-  "description": "A Gantt Chart with added grid, having the capability to provide additional details of task or schedule along with KPIs.",
+  "description": "A modified version of Gantt Chart by MAQ Software which allows adding custom markers for each Gantt task.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maqsoftware/PowerBI-visuals"
+    "url": "https://github.com/Eux86/PowerBI-visuals"
   },
   "keywords": [
     "powerbi-visuals"
@@ -19,7 +19,7 @@
     "pretest": "pbiviz package --resources --no-minify --no-pbiviz"
   },
   "author": {
-    "name": "MAQ Software",
+    "name": "EDT (original author: MAQ Software)",
     "email": "support@maqsoftware.com"
   },
   "license": "MIT",
